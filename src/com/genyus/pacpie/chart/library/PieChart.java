@@ -9,20 +9,25 @@ import android.graphics.Paint;
 import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.Transformation;
+import android.widget.AbsListView.LayoutParams;
 
 @SuppressLint("DrawAllocation")
 public class PieChart extends View {
-	
+
 	public static final int WAIT = 0;
 	public static final int IS_READY_TO_DRAW = 1;
 	public static final int IS_DRAW = 2;
 	private static final float START_INC = 30;
-	
+
 	private Paint bagPaints = new Paint();
 	private Paint linePaints = new Paint();
-	
-	private int strokeColor;
-	private float strokeWidth = 3.0f;
+
+	private int lineStrokeColor = 0x88FFFFFF;
+	private int bagStrokeColor = 0x88FF0000;
+	private float lineStrokeWidth = 3.0f;
+	private float bagStrokeWidth = 0.0f;
 	private boolean antiAlias = true;
 
 	private int width;
@@ -36,8 +41,8 @@ public class PieChart extends View {
 	private float start;
 	private float sweep;
 	private int maxConnection;
-	
-	private List<PieDetailsItem> mdataArray;
+
+	private List<PieDetailsItem> pieDetailsList;
 
 	public PieChart(Context context) {
 		super(context);
@@ -54,23 +59,22 @@ public class PieChart extends View {
 			return;
 		}
 		canvas.drawColor(backgroundColor);
-		bagPaints.setAntiAlias(true);
+		bagPaints.setAntiAlias(antiAlias);
 		bagPaints.setStyle(Paint.Style.FILL);
-		bagPaints.setColor(0x88FF0000);
-		bagPaints.setStrokeWidth(0.0f);
+		bagPaints.setColor(bagStrokeColor);
+		bagPaints.setStrokeWidth(bagStrokeWidth);
 		linePaints.setAntiAlias(antiAlias);
-		linePaints.setColor(strokeColor);
-		linePaints.setStrokeWidth(strokeWidth);
+		linePaints.setColor(lineStrokeColor);
+		linePaints.setStrokeWidth(lineStrokeWidth);
 		linePaints.setStyle(Paint.Style.STROKE);
 		RectF mOvals = new RectF(gapLeft, gapTop, width - gapRight, height
 				- gapBottm);
 		start = START_INC;
 		PieDetailsItem item;
-		for (int i = 0; i < mdataArray.size(); i++) {
-			item = (PieDetailsItem) mdataArray.get(i);
+		for (int i = 0; i < pieDetailsList.size(); i++) {
+			item = (PieDetailsItem) pieDetailsList.get(i);
 			bagPaints.setColor(item.color);
-			sweep = (float) 360
-					* ((float) item.count / (float) maxConnection);
+			sweep = (float) 360 * ((float) item.count / (float) maxConnection);
 			canvas.drawArc(mOvals, start, sweep, true, bagPaints);
 			canvas.drawArc(mOvals, start, sweep, true, linePaints);
 			start = start + sweep;
@@ -96,7 +100,7 @@ public class PieChart extends View {
 	}
 
 	public void setData(List<PieDetailsItem> data, int maxconnection) {
-		mdataArray = data;
+		pieDetailsList = data;
 		maxConnection = maxconnection;
 		state = IS_READY_TO_DRAW;
 	}
@@ -106,45 +110,75 @@ public class PieChart extends View {
 	}
 
 	public int getColorValues(int index) {
-		if (mdataArray == null) {
+		if (pieDetailsList == null) {
 			return 0;
 		}
 
 		else if (index < 0)
-			return ((PieDetailsItem) mdataArray.get(0)).color;
-		else if (index > mdataArray.size())
-			return ((PieDetailsItem) mdataArray.get(mdataArray.size() - 1)).color;
+			return ((PieDetailsItem) pieDetailsList.get(0)).color;
+		else if (index > pieDetailsList.size())
+			return ((PieDetailsItem) pieDetailsList
+					.get(pieDetailsList.size() - 1)).color;
 		else
-			return ((PieDetailsItem) mdataArray.get(mdataArray.size() - 1)).color;
+			return ((PieDetailsItem) pieDetailsList
+					.get(pieDetailsList.size() - 1)).color;
 
 	}
 
-	/**
-	 * @return the strokeColor
-	 */
-	public int getStrokeColor() {
-		return strokeColor;
+	@SuppressLint("InlinedApi")
+	public void expand() {
+		final View v = this;
+		v.measure(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
+		final int targtetHeight = v.getMeasuredHeight();
+
+		v.getLayoutParams().height = 0;
+		v.setVisibility(View.VISIBLE);
+		Animation a = new Animation() {
+			@Override
+			protected void applyTransformation(float interpolatedTime,
+					Transformation t) {
+				v.getLayoutParams().height = interpolatedTime == 1 ? LayoutParams.WRAP_CONTENT
+						: (int) (targtetHeight * interpolatedTime);
+				v.requestLayout();
+			}
+
+			@Override
+			public boolean willChangeBounds() {
+				return true;
+			}
+		};
+
+		a.setDuration((int) (targtetHeight * 3 / v.getContext().getResources()
+				.getDisplayMetrics().density));
+		v.startAnimation(a);
 	}
 
-	/**
-	 * @param strokeColor the strokeColor to set
-	 */
-	public void setStrokeColor(int strokeColor) {
-		this.strokeColor = strokeColor;
-	}
+	public void collapse() {
+		final View v = this;
+		final int initialHeight = v.getMeasuredHeight();
 
-	/**
-	 * @return the strokeWidth
-	 */
-	public float getStrokeWidth() {
-		return strokeWidth;
-	}
+		Animation a = new Animation() {
+			@Override
+			protected void applyTransformation(float interpolatedTime,
+					Transformation t) {
+				if (interpolatedTime == 1) {
+					v.setVisibility(View.GONE);
+				} else {
+					v.getLayoutParams().height = initialHeight
+							- (int) (initialHeight * interpolatedTime);
+					v.requestLayout();
+				}
+			}
 
-	/**
-	 * @param strokeWidth the strokeWidth to set
-	 */
-	public void setStrokeWidth(float strokeWidth) {
-		this.strokeWidth = strokeWidth;
+			@Override
+			public boolean willChangeBounds() {
+				return true;
+			}
+		};
+
+		a.setDuration((int) (initialHeight * 3 / v.getContext().getResources()
+				.getDisplayMetrics().density));
+		v.startAnimation(a);
 	}
 
 	/**
@@ -155,10 +189,86 @@ public class PieChart extends View {
 	}
 
 	/**
-	 * @param antiAlias the antiAlias to set
+	 * @param antiAlias
+	 *            the antiAlias to set
 	 */
 	public void setAntiAlias(boolean antiAlias) {
 		this.antiAlias = antiAlias;
+	}
+
+	/**
+	 * @return the lineStrokeColor
+	 */
+	public int getLineStrokeColor() {
+		return lineStrokeColor;
+	}
+
+	/**
+	 * @param lineStrokeColor
+	 *            the lineStrokeColor to set
+	 */
+	public void setLineStrokeColor(int lineStrokeColor) {
+		this.lineStrokeColor = lineStrokeColor;
+	}
+
+	/**
+	 * @return the bagStrokeColor
+	 */
+	public int getBagStrokeColor() {
+		return bagStrokeColor;
+	}
+
+	/**
+	 * @param bagStrokeColor
+	 *            the bagStrokeColor to set
+	 */
+	public void setBagStrokeColor(int bagStrokeColor) {
+		this.bagStrokeColor = bagStrokeColor;
+	}
+
+	/**
+	 * @return the lineStrokeWidth
+	 */
+	public float getLineStrokeWidth() {
+		return lineStrokeWidth;
+	}
+
+	/**
+	 * @param lineStrokeWidth
+	 *            the lineStrokeWidth to set
+	 */
+	public void setLineStrokeWidth(float lineStrokeWidth) {
+		this.lineStrokeWidth = lineStrokeWidth;
+	}
+
+	/**
+	 * @return the bagStrokeWidth
+	 */
+	public float getBagStrokeWidth() {
+		return bagStrokeWidth;
+	}
+
+	/**
+	 * @param bagStrokeWidth
+	 *            the bagStrokeWidth to set
+	 */
+	public void setBagStrokeWidth(float bagStrokeWidth) {
+		this.bagStrokeWidth = bagStrokeWidth;
+	}
+
+	/**
+	 * @return the backgroundColor
+	 */
+	public int getBackgroundColor() {
+		return backgroundColor;
+	}
+
+	/**
+	 * @param backgroundColor
+	 *            the backgroundColor to set
+	 */
+	public void setBackgroundColor(int backgroundColor) {
+		this.backgroundColor = backgroundColor;
 	}
 
 }
