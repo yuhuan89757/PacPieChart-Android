@@ -15,6 +15,10 @@ Version
 ----
 1.0
 
+Compatibility
+----
+Should be compatible with all SDK version (back to 1).
+
 Preview
 ---
 
