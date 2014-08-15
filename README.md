@@ -38,8 +38,11 @@ int itemCount=0;
 Create slices (here it's from a custom object named Answer)
 
 ```java
-itemCount = getPercent();
 
+//increment intem count
+itemCount = answer.getPercent();
+
+//create a slice
 PieDetailsItem item = new PieDetailsItem();
 item.count = itemCount;
 item.label = answer.getTextAnswer();
