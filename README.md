@@ -9,7 +9,7 @@ PacPie is a small library to generate Pie Chart as an ImageView (will be differe
   - Use your colors for fill & stroke
   - Add percents
   - Add a background color if needed
-  - Hide or show pie chart with animation (comming soon)
+  - Hide or show pie chart with animation
 
 Version
 ----
